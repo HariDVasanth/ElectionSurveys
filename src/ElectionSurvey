@@ -1,0 +1,202 @@
+1) WARD WISE WINNER
+
+SELECT
+    wd.Ward_Name AS ward_name,
+    cd.contestentName AS candidate_name,
+    pd.PartyName AS party_name,
+    total_votes
+FROM
+    (
+        SELECT
+            wd.Ward_Name,
+            st.CandidateID,
+            SUM(st.MenVotes + st.WomenVotes) AS total_votes
+        FROM
+            surveytable st
+        LEFT JOIN
+            street_details sd ON st.Street_ID = sd.Street_ID
+        LEFT JOIN
+            ward_details wd ON sd.WardID = wd.Ward_ID
+        GROUP BY
+            wd.Ward_Name, st.CandidateID
+    ) AS ranked
+JOIN
+    ward_details wd ON ranked.Ward_Name = wd.Ward_Name
+JOIN
+    contestentdetail cd ON ranked.CandidateID = cd.contestentID
+JOIN
+    partydetails pd ON cd.PartyID = pd.party_ID
+WHERE
+    total_votes = (
+        SELECT
+            MAX(total_votes)
+        FROM
+            (
+                SELECT
+                    wd.Ward_Name,
+                    st.CandidateID,
+                    SUM(st.MenVotes + st.WomenVotes) AS total_votes
+                FROM
+                    surveytable st
+                LEFT JOIN
+                    street_details sd ON st.Street_ID = sd.Street_ID
+                LEFT JOIN
+                    ward_details wd ON sd.WardID = wd.Ward_ID
+                WHERE
+                    wd.Ward_Name = ranked.Ward_Name
+                GROUP BY
+                    st.CandidateID
+            ) AS subquery
+    )
+ORDER BY
+    ward_name;
+
+2) Election Winner
+
+SELECT
+    c.Constituency_Name AS constituency_name,
+    cd.contestentName AS winning_candidate,
+    pd.PartyName AS winning_party,
+    total_votes
+FROM
+    (
+        SELECT
+            c.Constituency_Name,
+            s.CandidateID,
+            SUM(s.MenVotes + s.WomenVotes) AS total_votes
+        FROM
+            surveytable s
+        LEFT JOIN
+            contestentdetail cd ON s.CandidateID = cd.contestentID
+        LEFT JOIN
+            constituency c ON cd.ConstituencyID = c.Constituency_ID
+        GROUP BY
+            c.Constituency_Name, s.CandidateID
+    ) AS ranked
+JOIN
+    constituency c ON ranked.Constituency_Name = c.Constituency_Name
+JOIN
+    contestentdetail cd ON ranked.CandidateID = cd.contestentID
+JOIN
+    partydetails pd ON cd.PartyID = pd.party_ID
+WHERE
+    total_votes = (
+        SELECT
+            MAX(total_votes)
+        FROM
+            (
+                SELECT
+                    c.Constituency_Name,
+                    s.CandidateID,
+                    SUM(s.MenVotes + s.WomenVotes) AS total_votes
+                FROM
+                    surveytable s
+                LEFT JOIN
+                    contestentdetail cd ON s.CandidateID = cd.contestentID
+                LEFT JOIN
+                    constituency c ON cd.ConstituencyID = c.Constituency_ID
+                WHERE
+                    c.Constituency_Name = ranked.Constituency_Name
+                GROUP BY
+                    s.CandidateID
+            ) AS subquery
+    )
+ORDER BY
+    constituency_name;
+
+3) Vote Constituency Wise
+
+SELECT
+    c.Constituency_Name AS constituency_name,
+    cd.contestentName AS candidate_name,
+    pd.PartyName AS party_name,
+    total_votes
+FROM
+    (
+        SELECT
+            c.Constituency_Name,
+            s.CandidateID,
+            SUM(s.MenVotes + s.WomenVotes) AS total_votes
+        FROM
+            surveytable s
+        LEFT JOIN
+            contestentdetail cd ON s.CandidateID = cd.contestentID
+        LEFT JOIN
+            constituency c ON cd.ConstituencyID = c.Constituency_ID
+        GROUP BY
+            c.Constituency_Name, s.CandidateID
+    ) AS ranked
+JOIN
+    constituency c ON ranked.Constituency_Name = c.Constituency_Name
+JOIN
+    contestentdetail cd ON ranked.CandidateID = cd.contestentID
+JOIN
+    partydetails pd ON cd.PartyID = pd.party_ID
+ORDER BY
+    constituency_name, candidate_name;
+
+4) Mens and Women's Vote split
+
+SELECT
+    c.Constituency_Name AS constituency_name,
+    cd.contestentName AS candidate_name,
+    pd.PartyName AS party_name,
+    SUM(s.MenVotes) AS men_votes,
+    SUM(s.WomenVotes) AS women_votes
+FROM
+    surveytable s
+LEFT JOIN
+    contestentdetail cd ON s.CandidateID = cd.contestentID
+LEFT JOIN
+    constituency c ON cd.ConstituencyID = c.Constituency_ID
+LEFT JOIN
+    partydetails pd ON cd.PartyID = pd.party_ID
+GROUP BY
+    c.Constituency_Name, cd.contestentName, pd.PartyName
+ORDER BY
+    constituency_name, candidate_name;
+
+5) Ward wise Men and Women Votes Split Ward wise
+
+SELECT
+    wd.Ward_Name AS ward_name,
+    cd.contestentName AS candidate_name,
+    pd.PartyName AS party_name,
+    SUM(s.MenVotes) AS men_votes,
+    SUM(s.WomenVotes) AS women_votes
+FROM
+    surveytable s
+LEFT JOIN
+    contestentdetail cd ON s.CandidateID = cd.contestentID
+LEFT JOIN
+    street_details sd ON s.Street_ID = sd.Street_ID
+LEFT JOIN
+    ward_details wd ON sd.WardID = wd.Ward_ID
+LEFT JOIN
+    partydetails pd ON cd.PartyID = pd.party_ID
+GROUP BY
+    wd.Ward_Name, cd.contestentName, pd.PartyName
+ORDER BY
+    ward_name, candidate_name;
+
+6) Street Wise Men and Women's Vote split Street Wise
+
+SELECT
+    sd.StreetName AS street_name,
+    cd.contestentName AS candidate_name,
+    pd.PartyName AS party_name,
+    SUM(s.MenVotes) AS men_votes,
+    SUM(s.WomenVotes) AS women_votes
+FROM
+    surveytable s
+LEFT JOIN
+    contestentdetail cd ON s.CandidateID = cd.contestentID
+LEFT JOIN
+    street_details sd ON s.Street_ID = sd.Street_ID
+LEFT JOIN
+    partydetails pd ON cd.PartyID = pd.party_ID
+GROUP BY
+    sd.StreetName, cd.contestentName, pd.PartyName
+ORDER BY
+    street_name, candidate_name;
+
